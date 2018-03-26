@@ -13,4 +13,4 @@ indent_size = 2
 
 [*.{md,markdown}]
 indent_style = tab
-indent_size = 4
+tab_width = 4
