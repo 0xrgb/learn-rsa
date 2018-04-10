@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <gmp.h>
 
 // Low level custom functions
@@ -99,7 +100,7 @@ void mpz_addX(mpz_t c, const mpz_t a, const mpz_t b) {
   // Alloc memory generously
   // Check and realloc c
   need = 1 + (mpz_size(a) > mpz_size(b) ? mpz_size(a) : mpz_size(b));
-  if (c->_mp_alloc < need) mpz_realloc2(c, need * sizeof(mp_limb_t));
+  if (c->_mp_alloc < need) mpz_realloc2(c, need * sizeof(unsigned long) * 8);
 
   // mpz_sgn(X) == sign of X->_mp_size == sign of X
   // It returns -1, 0, or +1.
@@ -111,13 +112,72 @@ void mpz_addX(mpz_t c, const mpz_t a, const mpz_t b) {
 
 // c <- a - b
 void mpz_subX(mpz_t c, const mpz_t a, const mpz_t b) {
-  // TODO
+  mpz_t bb;
+  mpz_init(bb);
+  mpz_set(bb, b);
+  bb->_mp_size *= -1;
+  mpz_addX(c, a, bb);
+  mpz_clear(bb);
 }
 
+#define RANDOM_SEED (0x1234567890abcdefUL)
+#define REPEAT_TIME (100000000)
+#define BIT_SIZE (128)
+
 int main(int argc, char *argv[]) {
-  mpz_t a, b, c;
-  mpz_inits(a, b, c, NULL);
-  // TODO - Test custom functions (Speed / Error)
-  mpz_clears(a, b, c, NULL);
+  mpz_t a, b, c, d;
+  gmp_randstate_t state;
+
+  mpz_inits(a, b, c, d, NULL);
+  gmp_randinit_default(state);
+  gmp_randseed_ui(state, RANDOM_SEED);
+
+  // Assertive check
+  for (int i = 0; i < REPEAT_TIME; ++i) {
+    mpz_urandomb(a, state, BIT_SIZE);
+    mpz_urandomb(b, state, BIT_SIZE);
+    mpz_sub(c, a, b);
+    mpz_subX(d, a, b);
+    if (mpz_cmp(c, d) != 0) {
+      gmp_printf("mpz_subX error\nX = %Zd\nY = %Zd\n", a, b);
+      return -1;
+    }
+
+    mpz_sub(c, b, a);
+    mpz_subX(d, b, a);
+    if (mpz_cmp(c, d) != 0) {
+      gmp_printf("mpz_subX error\nX = %Zd\nY = %Zd\n", b, a);
+      return -1;
+    }
+
+    mpz_add(c, a, b);
+    mpz_addX(d, a, b);
+    if (mpz_cmp(c, d) != 0) {
+      gmp_printf("mpz_addX error\nX = %Zd\nY = %Zd\n", a, b);
+      return -1;
+    }
+  }
+
+  // Speed check
+  clock_t start, end;
+  double res;
+
+  // (1) Original function speed check
+  start = clock();
+  for (int i = 0; i < REPEAT_TIME; ++i) mpz_add(c, a, b);
+  end = clock();
+  res = (double)(end - start) / CLOCKS_PER_SEC;
+  printf("[mpz_add ]: %f s\n", res);
+
+  // (2) Custom function speed check
+  start = clock();
+  for (int i = 0; i < REPEAT_TIME; ++i) mpz_addX(c, a, b);
+  end = clock();
+  res = (double)(end - start) / CLOCKS_PER_SEC;
+  printf("[mpz_addX]: %f s\n", res);
+
+  // Clear
+  mpz_clears(a, b, c, d, NULL);
+  gmp_randclear(state);
   return 0;
 }
