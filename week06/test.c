@@ -1,6 +1,5 @@
 #include <stdio.h>
 
-#define NO_RSA_CRT
 #include "rsa.h"
 
 inline void mpz_mul_mod(mpz_t rop, const mpz_t a, const mpz_t b, const mpz_t n) {
