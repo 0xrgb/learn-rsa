@@ -1,0 +1,16 @@
+# Public key
+
++ n = p * q
++ e = 0x10001
+
+# Private key
+
++ p: <RSA Size> / 2, prime
++ q: <RSA Size> / 2, prime
++ d: ed === 1 (mod phi(n))
++ n
++ e
+
++ dp = d mod p-1
++ dq = d mod q-1
++ qi: q * qi === 1 (mod p)
